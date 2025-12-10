@@ -1,8 +1,13 @@
-/*
-/.*
+/bitrix/cache/
+/bitrix/managed_cache/
+/bitrix/stack_cache/
+/upload/tmp/
+/upload/resize_cache/
+/upload/iblock/*
 
-!/.gitignore
-!/calendar
-!/calendar/**
-!/composer.json
-!/composer.lock
+*.log
+/vendor/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
