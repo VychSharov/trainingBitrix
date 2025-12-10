@@ -1,0 +1,8 @@
+/*
+/.*
+
+!/.gitignore
+!/calendar
+!/calendar/**
+!/composer.json
+!/composer.lock
