@@ -28,8 +28,9 @@ return array (
       'ignore_silence' => false,
       'assertion_throws_exception' => true,
       'assertion_error_type' => 256,
-      'log' => array(
-        'class_name' => 'Bitrix\\Main\\Diag\\FileExceptionHandlerLog',
+     'log' => array(
+        'class_name' => 'Diag\\FileExceptionHandlerLogCustom',
+        'required_file' => 'php_interface/src/Diag/FileExceptionHandlerLogCustom.php',
         'settings' => array(
           'file' => '/local/logs/exceptions.log',
           'log_size' => 1000000,
