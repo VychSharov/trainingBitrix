@@ -75,3 +75,35 @@ register_shutdown_function(function () {
         ]);
     }
 });
+
+require_once $_SERVER['DOCUMENT_ROOT'] . '/local/php_interface/include/otus_doctor_booking_property.php';
+
+AddEventHandler(
+    'iblock',
+    'OnIBlockPropertyBuildList',
+    array('OtusDoctorBookingProperty', 'GetUserTypeDescription')
+);
+
+$requestUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+
+if (!defined('ADMIN_SECTION') && preg_match('#^/services/lists/16/view/0/#', $requestUri)) {
+    \CJSCore::Init(array('popup'));
+
+    $asset = \Bitrix\Main\Page\Asset::getInstance();
+    $asset->addJs('/local/js/otus/booking-selector/script.js');
+    $asset->addJs('/local/js/otus/public-list-booking.js');
+
+    $messages = array(
+        'OTUS_HW7_POPUP_TITLE' => 'Создание бронирования',
+        'OTUS_HW7_PATIENT_LABEL' => 'ФИО пациента',
+        'OTUS_HW7_TIME_LABEL' => 'Время записи',
+        'OTUS_HW7_CREATE_BUTTON' => 'Создать',
+        'OTUS_HW7_CANCEL_BUTTON' => 'Отмена',
+        'OTUS_HW7_REQUIRED_FIELDS' => 'Заполните все поля',
+        'OTUS_HW7_UNKNOWN_ERROR' => 'Неизвестная ошибка',
+    );
+
+    $asset->addString(
+        '<script>window.OtusBookingJsMessages = ' . \CUtil::PhpToJSObject($messages) . ';</script>'
+    );
+}
