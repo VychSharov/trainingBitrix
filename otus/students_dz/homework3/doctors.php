@@ -8,6 +8,12 @@ use Bitrix\Iblock\ElementTable;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+
+/**
+ * Class Homework3DoctorsPage
+ *
+ * Shows list of doctors and allows adding a new doctor.
+ */
 final class Homework3DoctorsPage extends AbstractPage
 {
     private const DOCTORS_IBLOCK_CODE = 'doctors';
@@ -53,6 +59,7 @@ final class Homework3DoctorsPage extends AbstractPage
             return;
         }
 
+        // Генерация CODE без Translit (чтобы не падало)
         $elementCode = 'doctor-' . substr(md5($title . '|' . microtime(true)), 0, 12);
 
         $el = new CIBlockElement();

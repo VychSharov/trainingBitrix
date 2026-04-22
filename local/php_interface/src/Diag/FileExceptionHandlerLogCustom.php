@@ -16,6 +16,7 @@ class FileExceptionHandlerLogCustom extends FileExceptionHandlerLog
 
     public function initialize(array $options): void
     {
+        // lang-файл (как у тебя)
         Loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/otus/debug.php');
 
         $logFile = '/local/logs/exceptions.log';
@@ -31,6 +32,8 @@ class FileExceptionHandlerLogCustom extends FileExceptionHandlerLog
 
         $maxLogSize = !empty($options['log_size']) ? (int)$options['log_size'] : 1000000;
 
+        // уровень детализации форматтера (как на скрине через $this->level)
+        // если не задан — оставим null, Bitrix сам отработает дефолтно
         if (isset($options['level']))
         {
             $this->level = (int)$options['level'];
@@ -45,20 +48,21 @@ class FileExceptionHandlerLogCustom extends FileExceptionHandlerLog
 
         $formatted = ExceptionHandlerFormatter::format($exception, false, $this->level);
 
+        // чистим файл, стек и разделители
         $lines = preg_split('/\r?\n/', trim($formatted));
         $clean = [];
 
         if (isset($lines[0])) {
-            $clean[] = $lines[0]; 
+            $clean[] = $lines[0]; // тип исключения
         }
         if (isset($lines[1])) {
-            $clean[] = $lines[1];
+            $clean[] = $lines[1]; // сообщение
         }
 
         $formattedClean = implode("\n", $clean);
 
         $date = date('Y-m-d H:i:s');
- 
+        //$type = static::logTypeToString($logType);
         $logLevel = static::logTypeToLevel($logType);
 
         $message = "OTUS - {$date}  - {$text}\n{$formattedClean}\n";

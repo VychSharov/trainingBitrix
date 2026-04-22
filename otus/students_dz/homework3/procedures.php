@@ -10,6 +10,12 @@ use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\PropertyTable;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+
+/**
+ * Class Homework3ProceduresPage
+ *
+ * Shows procedures linked to selected doctor, allows adding procedures and linking them.
+ */
 final class Homework3ProceduresPage extends AbstractPage
 {
     private const DOCTORS_IBLOCK_CODE = 'doctors';
@@ -46,6 +52,7 @@ final class Homework3ProceduresPage extends AbstractPage
 
         $action = (string)($_POST['action'] ?? '');
 
+        // 1) Add procedure
         if ($action === 'add_procedure') {
             $procName = trim((string)($_POST['proc_name'] ?? ''));
             if ($procName !== '') {
@@ -59,11 +66,13 @@ final class Homework3ProceduresPage extends AbstractPage
             LocalRedirect($GLOBALS['APPLICATION']->GetCurPageParam());
         }
 
+        // 2) Link existing procedure to doctor (WITHOUT deleting previous links)
         if ($action === 'link_procedure') {
             $procedureId = (int)($_POST['procedure_id'] ?? 0);
             if ($procedureId > 0) {
                 $linkPropId = $this->getPropertyIdByCode($doctorsIblockId, self::LINK_PROP_CODE);
                 if ($linkPropId > 0) {
+                    // current values
                     $currentRows = ElementPropertyTable::getList([
                         'select' => ['VALUE'],
                         'filter' => [
@@ -80,8 +89,10 @@ final class Homework3ProceduresPage extends AbstractPage
                         }
                     }
 
+                    // add new one
                     $values[$procedureId] = $procedureId;
 
+                    // write all back
                     CIBlockElement::SetPropertyValuesEx(
                         $doctorId,
                         $doctorsIblockId,
@@ -149,6 +160,7 @@ final class Homework3ProceduresPage extends AbstractPage
 
         echo '<h1>' . htmlspecialcharsbx($doctor['NAME']) . '</h1>';
 
+        // --- Add procedure form ---
         echo '<h3>' . htmlspecialcharsbx(Loc::getMessage('OTUS_HW3_ADD_PROC_TITLE') ?: 'Добавить процедуру') . '</h3>';
         echo '<form method="post">';
         echo bitrix_sessid_post();
@@ -157,6 +169,7 @@ final class Homework3ProceduresPage extends AbstractPage
         echo '<button type="submit">' . htmlspecialcharsbx(Loc::getMessage('OTUS_HW3_ADD') ?: 'Добавить') . '</button>';
         echo '</form>';
 
+        // --- Link existing procedure form ---
         $allProcedures = ElementTable::getList([
             'select' => ['ID', 'NAME'],
             'filter' => ['=IBLOCK_ID' => $proceduresIblockId],
@@ -179,6 +192,7 @@ final class Homework3ProceduresPage extends AbstractPage
 
         echo '<hr>';
 
+        // --- Current doctor procedures list ---
         echo '<h2>' . htmlspecialcharsbx(Loc::getMessage('OTUS_HW3_PROCS_TITLE') ?: 'Процедуры') . '</h2>';
 
         if (!$procedureIds) {
@@ -200,6 +214,8 @@ final class Homework3ProceduresPage extends AbstractPage
     }
 
     /**
+     * Loads common OTUS lang file messages.
+     *
      * @return void
      */
     private function loadCommonLang(): void
@@ -211,6 +227,8 @@ final class Homework3ProceduresPage extends AbstractPage
     }
 
     /**
+     * Returns iblock ID by CODE.
+     *
      * @param string $code
      * @return int
      */
@@ -226,6 +244,8 @@ final class Homework3ProceduresPage extends AbstractPage
     }
 
     /**
+     * Returns property ID by iblock ID and property CODE.
+     *
      * @param int $iblockId
      * @param string $code
      * @return int
@@ -242,6 +262,8 @@ final class Homework3ProceduresPage extends AbstractPage
     }
 
     /**
+     * Returns linked procedure IDs for a doctor.
+     *
      * @param int $doctorId
      * @param int $propertyId
      * @return int[]

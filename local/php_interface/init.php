@@ -10,3 +10,68 @@ Loader::registerAutoLoadClasses(null, [
     'Local\Model\Iblock\Cars'       => '/local/php_interface/lib/Model/Iblock/Cars.php',
     'Local\Model\Iblock\Dealers'    => '/local/php_interface/lib/Model/Iblock/Dealers.php',
 ]);
+
+// === Sharov debug logger (safe) ===
+if (!function_exists('sharov_debug_log')) {
+    function sharov_debug_log(string $msg, array $ctx = []): void
+    {
+        $dir = $_SERVER['DOCUMENT_ROOT'] . '/local/logs';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        $file = $dir . '/sharov_fatal.log';
+        $date = date('Y-m-d H:i:s');
+
+        $line = '['.$date.'] ' . $msg;
+        if (!empty($ctx)) {
+            $line .= ' | ' . json_encode($ctx, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $line .= PHP_EOL;
+
+        @file_put_contents($file, $line, FILE_APPEND);
+    }
+}
+
+// логируем вообще всё (в файл), на экран не выводим
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    sharov_debug_log('PHP ERROR', [
+        'severity' => $severity,
+        'message' => $message,
+        'file' => $file,
+        'line' => $line,
+        'uri' => $_SERVER['REQUEST_URI'] ?? '',
+    ]);
+    return false; // пусть Bitrix тоже обработает
+});
+
+set_exception_handler(function (Throwable $e) {
+    sharov_debug_log('UNCAUGHT EXCEPTION', [
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        'trace' => $e->getTraceAsString(),
+    ]);
+});
+
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if (!$e) {
+        return;
+    }
+
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (in_array($e['type'], $fatalTypes, true)) {
+        sharov_debug_log('FATAL SHUTDOWN', [
+            'type' => $e['type'],
+            'message' => $e['message'],
+            'file' => $e['file'],
+            'line' => $e['line'],
+            'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        ]);
+    }
+});
