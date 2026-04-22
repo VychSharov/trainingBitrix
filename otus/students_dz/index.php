@@ -53,52 +53,52 @@ Asset::getInstance()->addCss('//cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bo
                 </h2>
             </li>
             <li>
-                <h2 class="item clock"><a href="homework3/">ДЗ #3: Связывание моделей</a>
+                <h2 class="item done"><a href="homework3/">ДЗ #3: Связывание моделей</a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item clock"><a href="homework4/">ДЗ #4: Создание своих таблиц БД и написание модели данных к ним</a>
+                <h2 class="item done"><a href="homework4/">ДЗ #4: Создание своих таблиц БД и написание модели данных к ним</a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework5/">ДЗ #5: Компонент списка таблицы БД</a>
+                <h2 class="item clock"><a href="homework5/">ДЗ #5: Компонент списка таблицы БД</a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework6/">ДЗ #6: Написание своего модуля</a>
+                <h2 class="item clock"><a href="homework6/">ДЗ #6: Написание своего модуля</a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework7/">ДЗ #7: Создание кастомных полей и встраивание их в систему - в процессе</a>
-                    <div class="prog proc"></div>
+                <h2 class="item clock"><a href="homework7/">ДЗ #7: Создание кастомных полей и встраивание их в систему - в процессе</a>
+                    <div class="icon"></div>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework8/">ДЗ #8: Учимся подключать свои скрипты, взаимодействовать с компонентами из фронтенда</a>
+                <h2 class="item clock"><a href="homework8/">ДЗ #8: Учимся подключать свои скрипты, взаимодействовать с компонентами из фронтенда</a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework9/">ДЗ #9: Написание своих активити для БП - на проверке! </a>
+                <h2 class="item clock"><a href="homework9/">ДЗ #9: Написание своих активити для БП - на проверке! </a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework10/">ДЗ #10: Обработка событий </a>
+                <h2 class="item clock"><a href="homework10/">ДЗ #10: Обработка событий </a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework11/">ДЗ #11: Локальное REST приложение дата последней коммуникации </a>
+                <h2 class="item clock"><a href="homework11/">ДЗ #11: Локальное REST приложение дата последней коммуникации </a>
                     <i class="icon"></i>
                 </h2>
             </li>
             <li>
-                <h2 class="item"><a href="homework12/">ДЗ #12: Собственные обработчики REST </a>
+                <h2 class="item clock"><a href="homework12/">ДЗ #12: Собственные обработчики REST </a>
                     <i class="icon"></i>
                 </h2>
             </li>

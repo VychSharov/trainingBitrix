@@ -23,9 +23,9 @@ $MESS['OTUS_HW3_TITLE_FIELD'] = 'Название';
 $MESS['OTUS_HW3_NAME'] = 'Имя';
 $MESS['OTUS_HW3_LASTNAME'] = 'Фамилия';
 $MESS['OTUS_HW3_ADD'] = 'Добавить';
+
 $MESS['OTUS_HW3_ADD_PROC_TITLE'] = 'Добавить процедуру';
 $MESS['OTUS_HW3_PROC_NAME'] = 'Название процедуры';
+
 $MESS['OTUS_HW3_LINK_PROC_TITLE'] = 'Привязать процедуру к врачу';
 $MESS['OTUS_HW3_LINK'] = 'Привязать';
-
-//4
