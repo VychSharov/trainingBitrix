@@ -107,3 +107,21 @@ if (!defined('ADMIN_SECTION') && preg_match('#^/services/lists/16/view/0/#', $re
         '<script>window.OtusBookingJsMessages = ' . \CUtil::PhpToJSObject($messages) . ';</script>'
     );
 }
+
+if (!defined('ADMIN_SECTION')) {
+    \CJSCore::Init(array('popup'));
+
+    $asset = \Bitrix\Main\Page\Asset::getInstance();
+    $asset->addJs('/local/js/otus/workday-confirm.js');
+
+    $messages = array(
+        'OTUS_HW8_POPUP_TITLE' => 'Начало рабочего дня',
+        'OTUS_HW8_POPUP_TEXT' => 'Подтвердите начало рабочего дня',
+        'OTUS_HW8_START_BUTTON' => 'Начать рабочий день',
+        'OTUS_HW8_CANCEL_BUTTON' => 'Отмена',
+    );
+
+    $asset->addString(
+        '<script>window.OtusWorkdayJsMessages = ' . \CUtil::PhpToJSObject($messages) . ';</script>'
+    );
+}
