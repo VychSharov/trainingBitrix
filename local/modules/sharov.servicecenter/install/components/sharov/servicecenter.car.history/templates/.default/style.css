@@ -1,0 +1,33 @@
+.sharov-sc-history {
+    padding: 18px;
+}
+
+.sharov-sc-history__title {
+    margin: 0 0 18px;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.sharov-sc-history__table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.sharov-sc-history__table th,
+.sharov-sc-history__table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    text-align: left;
+    vertical-align: top;
+}
+
+.sharov-sc-history__table th {
+    background: #f7f8fa;
+    font-weight: 600;
+}
+
+.sharov-sc-history__products {
+    margin: 0;
+    padding-left: 18px;
+}

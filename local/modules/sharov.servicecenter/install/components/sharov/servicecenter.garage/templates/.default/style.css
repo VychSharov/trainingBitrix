@@ -1,0 +1,38 @@
+.sharov-sc-garage-actions {
+    margin-bottom: 15px;
+}
+
+.sharov-sc-car-form {
+    padding: 15px;
+    margin-bottom: 20px;
+    background: #f7f9fa;
+    border: 1px solid #dce3e8;
+    border-radius: 4px;
+}
+
+.sharov-sc-form-row {
+    margin-bottom: 12px;
+}
+
+.sharov-sc-form-row label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: bold;
+}
+
+.sharov-sc-form-row input {
+    width: 300px;
+    max-width: 100%;
+}
+
+.sharov-sc-car-table tbody tr {
+    cursor: pointer;
+}
+
+.sharov-sc-car-table tbody tr:hover {
+    background: #eef7ff;
+}
+
+.sharov-sc-empty {
+    margin-top: 15px;
+}

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS b_sharov_sc_car;
