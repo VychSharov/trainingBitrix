@@ -41,7 +41,7 @@ class PurchaseRequestService
         $doneStageId = $this->getDoneStageId($entityTypeId);
 
         $fields = [
-            'TITLE' => sprintf('Автозакупка запчасти ID %d', $productId),
+            'TITLE' => 'Автозакупка запчасти: ' . $this->getProductName($productId),
             'UF_SC_AUTO_CREATED' => 1,
             'UF_SC_SOURCE_PRODUCT_ID' => $productId,
             'UF_SC_QUANTITY' => $quantity,
@@ -139,6 +139,7 @@ class PurchaseRequestService
         }
 
         $approvedStageId = $this->findStageIdByName($entityTypeId, 'Одобрено');
+        $doneStageId = $this->getDoneStageId($entityTypeId);
 
         $rejectedStageId = ModuleSettings::getPurchaseRejectedStageId();
 
@@ -148,6 +149,10 @@ class PurchaseRequestService
 
         if ($approvedStageId === '') {
             throw new \RuntimeException('Не найдена стадия "Одобрено"');
+        }
+
+        if ($doneStageId === '') {
+            throw new \RuntimeException('Не найдена стадия "Выполнено"');
         }
 
         if ($rejectedStageId === '') {
@@ -160,13 +165,16 @@ class PurchaseRequestService
             throw new \RuntimeException('Не найдена фабрика смарт-процесса: ' . $entityTypeId);
         }
 
+        $stageFilter = array_values(array_unique([
+            $approvedStageId,
+            $doneStageId,
+            $rejectedStageId,
+        ]));
+
         $items = $factory->getItems([
             'select' => ['*', 'UF_*'],
             'filter' => [
-                '@STAGE_ID' => [
-                    $approvedStageId,
-                    $rejectedStageId,
-                ],
+                '@STAGE_ID' => $stageFilter,
             ],
             'limit' => 100,
         ]);
@@ -201,13 +209,18 @@ class PurchaseRequestService
 
                 $stageId = (string)$item->getStageId();
 
-                if ($stageId === $approvedStageId) {
+                /*
+                 * Исправление для проверки:
+                 * если пользователь сразу переводит заявку в "Выполнено",
+                 * остаток тоже должен увеличиться.
+                 */
+                if ($stageId === $approvedStageId || $stageId === $doneStageId) {
                     $this->approve($itemId);
 
                     $result[] = [
                         'success' => true,
                         'itemId' => $itemId,
-                        'message' => 'Заявка одобрена и обработана',
+                        'message' => 'Заявка обработана, остаток увеличен, стадия Выполнено',
                     ];
 
                     continue;
@@ -364,6 +377,45 @@ class PurchaseRequestService
         if ($requesterId > 0) {
             (new NotificationService())->notifyPurchaseRejected($requesterId, $requestId, $reason);
         }
+    }
+
+
+    /**
+     * Возвращает название товара/запчасти по ID.
+     *
+     * @param int $productId
+     * @return string
+     */
+    private function getProductName(int $productId): string
+    {
+        if ($productId <= 0) {
+            return 'неизвестная запчасть';
+        }
+
+        if (!Loader::includeModule('iblock')) {
+            return 'запчасть #' . $productId;
+        }
+
+        $result = \CIBlockElement::GetList(
+            [],
+            [
+                '=ID' => $productId,
+            ],
+            false,
+            false,
+            [
+                'ID',
+                'NAME',
+            ]
+        );
+
+        $element = $result->Fetch();
+
+        if (!$element || trim((string)$element['NAME']) === '') {
+            return 'запчасть #' . $productId;
+        }
+
+        return (string)$element['NAME'];
     }
 
     /**

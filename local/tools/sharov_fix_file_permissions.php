@@ -8,43 +8,104 @@ if (!$USER || !$USER->IsAdmin()) {
     die('Access denied');
 }
 
-/*
- * ID сайта. Обычно s1.
- */
 $siteId = SITE_ID ?: 's1';
 
 /*
- * 1 — администраторы
- * 2 — все зарегистрированные пользователи
- *
+ * Базовые группы проекта.
  * R = чтение
- * W = запись
  * X = полный доступ
  */
 $permissions = [
-    '1' => 'X',
-    '20' => 'R',
-    '21' => 'R',
-    '22' => 'R',
-    '23' => 'R',
-    '24' => 'R',
-
+    '1' => 'X', // Администраторы
 ];
 
 /*
- * Даём чтение на корень сайта.
+ * Названия групп, которым надо дать доступ к публичным CRM-страницам.
  */
-$APPLICATION->SetFileAccessPermission(
-    [$siteId, '/'],
-    $permissions
-);
+$groupNamesToAllow = [
+    'Менеджер сервисного центра',
+    'Механик сервисного центра',
+    'Закупщик сервисного центра',
+    'Закупщики сервисного центра',
+    'Начальник отдела закупок',
+    'Начальники закупок',
+    'Бухгалтер сервисного центра',
+    'Директор сервисного центра',
+];
+
+$foundGroups = [];
+
+$by = 'id';
+$order = 'asc';
+
+$groupResult = CGroup::GetList($by, $order, []);
+
+while ($group = $groupResult->Fetch()) {
+    $groupId = (int)$group['ID'];
+    $groupName = trim((string)$group['NAME']);
+
+    if (in_array($groupName, $groupNamesToAllow, true)) {
+        $permissions[(string)$groupId] = 'R';
+
+        $foundGroups[] = [
+            'ID' => $groupId,
+            'NAME' => $groupName,
+        ];
+    }
+}
 
 /*
- * И отдельно на index.php, потому что ошибка именно по нему.
+ * Файлы и разделы, на которые даём чтение.
  */
-$APPLICATION->SetFileAccessPermission(
-    [$siteId, '/index.php'],
-    $permissions
-);
+$paths = [
+    '/',
+    '/index.php',
+    '/crm/',
+    '/crm/index.php',
+    '/crm/deal/',
+    '/crm/deal/index.php',
+    '/crm/contact/',
+    '/crm/contact/index.php',
+    '/crm/type/',
+    '/crm/type/index.php',
+    '/shop/',
+    '/shop/index.php',
+];
 
-echo 'Права выданы: группа 2 получила чтение на / и /index.php';
+foreach ($paths as $path) {
+    $APPLICATION->SetFileAccessPermission(
+        [$siteId, $path],
+        $permissions
+    );
+}
+
+echo '<h2>Права обновлены</h2>';
+
+echo '<pre>';
+echo 'SITE_ID = ' . $siteId . PHP_EOL . PHP_EOL;
+
+echo 'Пути:' . PHP_EOL;
+foreach ($paths as $path) {
+    echo $path . PHP_EOL;
+}
+
+echo PHP_EOL;
+
+echo 'Выданы права группам:' . PHP_EOL;
+foreach ($permissions as $groupId => $permission) {
+    echo 'Группа ID=' . $groupId . ' => ' . $permission . PHP_EOL;
+}
+
+echo PHP_EOL;
+
+if (!empty($foundGroups)) {
+    echo 'Найдены группы:' . PHP_EOL;
+
+    foreach ($foundGroups as $group) {
+        echo 'ID=' . $group['ID'] . ', NAME=' . $group['NAME'] . PHP_EOL;
+    }
+} else {
+    echo 'ВНИМАНИЕ: группы проекта не найдены. Проверь точные названия групп.' . PHP_EOL;
+}
+
+echo '</pre>';

@@ -2,9 +2,10 @@
 
 namespace Sharov\ServiceCenter\Agent;
 
+use Bitrix\Main\Loader;
 use Sharov\ServiceCenter\Infrastructure\Logger;
-use Sharov\ServiceCenter\Service\CatalogStockService;
-use Sharov\ServiceCenter\Service\PurchaseRequestService;
+use Sharov\ServiceCenter\Service\StockSyncService;
+use Throwable;
 
 class StockSyncAgent
 {
@@ -16,35 +17,23 @@ class StockSyncAgent
     public static function run(): string
     {
         try {
-            $stockService = new CatalogStockService();
-            $purchaseService = new PurchaseRequestService();
-            $productIds = $stockService->getTrackedProductIds();
-
-            if (empty($productIds)) {
-                Logger::info('Stock sync skipped: tracked products are not configured');
-
-                return '\\Sharov\\ServiceCenter\\Agent\\StockSyncAgent::run();';
+            if (!Loader::includeModule('sharov.servicecenter')) {
+                throw new \RuntimeException('Модуль sharov.servicecenter не подключен');
             }
 
-            foreach ($productIds as $productId) {
-                $quantity = $stockService->getExternalQuantity();
+            $result = (new StockSyncService())->sync();
 
-                if ($quantity === 0) {
-                    $purchaseService->createAutoPurchaseRequest($productId, 10);
-                    $stockService->updateQuantity($productId, 10);
-                    continue;
-                }
-
-                $stockService->updateQuantity($productId, $quantity);
-            }
-        } catch (\Throwable $exception) {
-            Logger::error('Stock sync error', [
+            Logger::info('Stock sync agent finished', [
+                'result' => $result,
+            ]);
+        } catch (Throwable $exception) {
+            Logger::error('Stock sync agent error', [
                 'message' => $exception->getMessage(),
                 'file' => $exception->getFile(),
                 'line' => $exception->getLine(),
             ]);
         }
 
-        return '\Sharov\ServiceCenter\Agent\StockSyncAgent::run();';
+        return '\\Sharov\\ServiceCenter\\Agent\\StockSyncAgent::run();';
     }
 }

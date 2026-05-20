@@ -11,9 +11,6 @@ class PurchaseRequestHandler
     /**
      * Обрабатывает изменение стадии заявки на закупку.
      *
-     * Этот метод можно привязать к событию смарт-процесса в конкретной версии Битрикс24
-     * или вызвать из бизнес-процесса/робота через PHP-активити.
-     *
      * @param int $entityTypeId
      * @param int $itemId
      * @param string $stageId
@@ -28,13 +25,16 @@ class PurchaseRequestHandler
 
             $service = new PurchaseRequestService();
 
-            if ($stageId === ModuleSettings::getPurchaseApprovedStageId()) {
+            $approvedStageId = ModuleSettings::getPurchaseApprovedStageId();
+            $doneStageId = ModuleSettings::getPurchaseDoneStageId();
+
+            if ($stageId === $approvedStageId || $stageId === $doneStageId) {
                 $service->approve($itemId);
                 return;
             }
 
             if ($stageId === ModuleSettings::getPurchaseRejectedStageId()) {
-                $service->reject($itemId, 'Заявка отклонена сотрудником отдела закупок');
+                $service->reject($itemId, '');
             }
         } catch (\Throwable $exception) {
             Logger::error('Purchase request stage handler error', [
@@ -42,8 +42,6 @@ class PurchaseRequestHandler
                 'itemId' => $itemId,
                 'stageId' => $stageId,
                 'message' => $exception->getMessage(),
-                'file' => $exception->getFile(),
-                'line' => $exception->getLine(),
             ]);
         }
     }

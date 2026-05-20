@@ -34,17 +34,11 @@ class DealEventHandler
     {
         Loc::loadMessages(__FILE__);
 
-        $dealId = isset($fields['ID']) ? (int)$fields['ID'] : null;
-
-        return self::checkOpenServiceOrders($fields, $dealId);
+        return self::checkOpenServiceOrders($fields, self::extractDealId($fields));
     }
 
     /**
-     * Запрещает создать/сохранить сделку, если по машине уже есть открытый сервисный заказ-наряд.
-     *
-     * Важно:
-     * обычные сделки по этому же автомобилю НЕ блокируем.
-     * Блокируем только сделки, у которых включено поле "Сервисный заказ-наряд".
+     * Запрещает создать/сохранить заказ-наряд, если по автомобилю уже есть открытый заказ-наряд.
      *
      * @param array $fields
      * @param int|null $dealId
@@ -52,21 +46,17 @@ class DealEventHandler
      */
     private static function checkOpenServiceOrders(array &$fields, ?int $dealId): bool
     {
-        global $APPLICATION;
-
         if (!Loader::includeModule('crm')) {
             return true;
         }
 
         $mergedFields = self::mergeWithCurrentDealFields($fields, $dealId);
 
-        $isServiceOrder = self::isTruthy($mergedFields[self::SERVICE_ORDER_FIELD] ?? 0);
-
         /*
-         * Если это НЕ сервисный заказ-наряд, дубль не проверяем.
-         * Обычные сделки по тому же автомобилю создавать можно.
+         * Обычные сделки по этому автомобилю не блокируем.
+         * Контроль включается только для сделок с галкой "Сервисный заказ-наряд".
          */
-        if (!$isServiceOrder) {
+        if (!self::isTruthy($mergedFields[self::SERVICE_ORDER_FIELD] ?? 0)) {
             return true;
         }
 
@@ -76,25 +66,96 @@ class DealEventHandler
             return true;
         }
 
+        /*
+         * Закрытие текущего заказ-наряда в финальную стадию должно быть разрешено.
+         */
+        $stageId = (string)($mergedFields['STAGE_ID'] ?? '');
+        if ($stageId !== '' && self::isFinalDealStage($stageId)) {
+            return true;
+        }
+
         $openDeals = self::findOpenServiceOrdersByCarId($carId, $dealId);
 
         if (empty($openDeals)) {
             return true;
         }
 
-        $message = Loc::getMessage('SHAROV_SC_DUPLICATE_OPEN_DEAL_ERROR')
-            ?: 'По этому автомобилю уже есть открытый сервисный заказ-наряд. Закройте предыдущий заказ-наряд.';
+        $openDeal = $openDeals[0];
 
-        $APPLICATION->ThrowException($message);
+        /*
+         * ВАЖНО:
+         * Сообщение формируем прямо здесь без ID, чтобы Битрикс не показывал технический текст
+         * и чтобы в ошибке не было "ID=...".
+         */
+        $message = self::buildDuplicateOpenDealMessage($openDeal);
+
+        self::setCrmError($fields, $message);
 
         $assignedById = (int)($mergedFields['ASSIGNED_BY_ID'] ?? 0);
 
         if ($assignedById > 0) {
-            $notificationService = new NotificationService();
-            $notificationService->notifyDuplicateOpenDeal($assignedById, $openDeals[0]);
+            (new NotificationService())->notifyDuplicateOpenDeal($assignedById, $openDeal);
         }
 
         return false;
+    }
+
+    /**
+     * Формирует пользовательское сообщение об ошибке дубля заказ-наряда.
+     *
+     * @param array $openDeal
+     * @return string
+     */
+    private static function buildDuplicateOpenDealMessage(array $openDeal): string
+    {
+        $title = trim((string)($openDeal['TITLE'] ?? ''));
+
+        if ($title === '') {
+            $title = 'без названия';
+        }
+
+        return 'По этому автомобилю уже есть незакрытый сервисный заказ-наряд: "'
+            . $title
+            . '". Закройте предыдущий заказ-наряд перед созданием нового.';
+    }
+
+    /**
+     * Записывает пользовательское сообщение ошибки в формат, который CRM показывает вместо технического текста.
+     *
+     * @param array $fields
+     * @param string $message
+     * @return void
+     */
+    private static function setCrmError(array &$fields, string $message): void
+    {
+        global $APPLICATION;
+
+        /*
+         * RESULT_MESSAGE нужен CRM, чтобы показать нормальный текст ошибки,
+         * а не "Обновление сделки отменено обработчиком события...".
+         */
+        $fields['RESULT_MESSAGE'] = $message;
+
+        if (is_object($APPLICATION) && method_exists($APPLICATION, 'ThrowException')) {
+            $APPLICATION->ThrowException($message);
+        }
+    }
+
+    /**
+     * Достаёт ID сделки из массива события.
+     *
+     * @param array $fields
+     * @return int|null
+     */
+    private static function extractDealId(array $fields): ?int
+    {
+        foreach (['ID', 'id', 'DEAL_ID', 'dealId'] as $key) {
+            if (isset($fields[$key]) && (int)$fields[$key] > 0) {
+                return (int)$fields[$key];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -113,9 +174,6 @@ class DealEventHandler
 
         $currentFields = self::getCurrentDealFields($dealId);
 
-        /*
-         * Важно: новые значения из $fields должны перекрывать старые.
-         */
         return array_merge($currentFields, $fields);
     }
 
@@ -163,7 +221,6 @@ class DealEventHandler
         $filter = [
             'CHECK_PERMISSIONS' => 'N',
             '=' . self::CAR_FIELD => $carId,
-            '=' . self::SERVICE_ORDER_FIELD => 1,
         ];
 
         if ($excludeDealId && $excludeDealId > 0) {
@@ -192,6 +249,10 @@ class DealEventHandler
         $openDeals = [];
 
         while ($deal = $result->Fetch()) {
+            if (!self::isTruthy($deal[self::SERVICE_ORDER_FIELD] ?? 0)) {
+                continue;
+            }
+
             $stageId = (string)($deal['STAGE_ID'] ?? '');
 
             if (self::isFinalDealStage($stageId)) {
@@ -227,9 +288,6 @@ class DealEventHandler
             return false;
         }
 
-        /*
-         * Быстрый fallback для типовых стадий Bitrix.
-         */
         if (
             $stageId === 'WON'
             || $stageId === 'LOSE'
@@ -256,12 +314,7 @@ class DealEventHandler
             return false;
         }
 
-        $semantics = (string)($row['SEMANTICS'] ?? '');
-
-        /*
-         * S = success, F = failure.
-         */
-        return in_array($semantics, ['S', 'F'], true);
+        return in_array((string)($row['SEMANTICS'] ?? ''), ['S', 'F'], true);
     }
 
     /**

@@ -17,10 +17,13 @@ Loader::registerAutoLoadClasses('sharov.servicecenter', [
     'Sharov\ServiceCenter\Service\CrmAutoResolver' => 'lib/Service/CrmAutoResolver.php',
     'Sharov\ServiceCenter\Service\CarHistoryService' => 'lib/Service/CarHistoryService.php',
     'Sharov\ServiceCenter\Service\CatalogStockService' => 'lib/Service/CatalogStockService.php',
+    'Sharov\ServiceCenter\Service\StockSyncService' => 'lib/Service/StockSyncService.php',
+    'Sharov\ServiceCenter\Service\ServicePartProvider' => 'lib/Service/ServicePartProvider.php',
     'Sharov\ServiceCenter\Service\PurchaseRequestService' => 'lib/Service/PurchaseRequestService.php',
     'Sharov\ServiceCenter\Service\NotificationService' => 'lib/Service/NotificationService.php',
     'Sharov\ServiceCenter\Service\ApproverResolver' => 'lib/Service/ApproverResolver.php',
     'Sharov\ServiceCenter\Service\SetupValidator' => 'lib/Service/SetupValidator.php',
 
     'Sharov\ServiceCenter\Agent\StockSyncAgent' => 'lib/Agent/StockSyncAgent.php',
+    'Sharov\ServiceCenter\Agent\PurchaseRequestAgent' => 'lib/Agent/PurchaseRequestAgent.php',
 ]);
