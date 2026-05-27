@@ -125,3 +125,51 @@ if (!defined('ADMIN_SECTION')) {
         '<script>window.OtusWorkdayJsMessages = ' . \CUtil::PhpToJSObject($messages) . ';</script>'
     );
 }
+
+use Bitrix\Main\Context;
+use Bitrix\Main\Page\Asset;
+
+AddEventHandler('main', 'OnProlog', function () {
+    $request = Context::getCurrent()->getRequest();
+    $uri = $request->getRequestUri();
+
+    if (
+        strpos($uri, '/crm/deal/details/') !== false
+        || strpos($uri, '/crm/deal/edit/') !== false
+        || strpos($uri, 'crm.deal.details') !== false
+    ) {
+        Asset::getInstance()->addJs('/local/js/sharov.servicecenter/deal-service-selects.js');
+    }
+});
+
+AddEventHandler('main', 'OnProlog', function () {
+    $request = Context::getCurrent()->getRequest();
+    $uri = $request->getRequestUri();
+
+    if (
+        strpos($uri, '/crm/type/1046/details/') !== false
+        || strpos($uri, '/crm/type/1046/edit/') !== false
+        || strpos($uri, 'crm.type.item.details') !== false
+    ) {
+        Asset::getInstance()->addJs('/local/js/sharov.servicecenter/purchase-request-selects.js?v=1');
+    }
+});
+
+AddEventHandler('main', 'OnEpilog', static function () {
+    global $APPLICATION;
+
+    $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    $page = $APPLICATION->GetCurPage(false);
+
+    $isDealPage =
+        preg_match('#/crm/deal/details/\d+/#', $requestUri)
+        || preg_match('#/crm/deal/details/\d+/#', $page);
+
+    if (!$isDealPage) {
+        return;
+    }
+
+    \Bitrix\Main\Page\Asset::getInstance()->addJs(
+        '/local/js/sharov.servicecenter/deal-product-parts-filter.js'
+    );
+});
