@@ -271,13 +271,28 @@ class PurchaseRequestService
             return;
         }
 
+        $itemData = $this->getSmartProcessItem($entityTypeId, $requestId);
+
+        if (!$this->isApprovedByApprover($itemData)) {
+            $this->returnToAgreementStage($entityTypeId, $requestId);
+
+            $approverId = $this->extractUserId($itemData['UF_SC_APPROVER_ID'] ?? 0);
+            $stageChangerId = $this->getStageChangerId($itemData);
+
+            throw new \RuntimeException(
+                'Заявка #' . $requestId
+                . ' возвращена на согласование: одобрить закупку может только пользователь из поля "Согласующий" или начальник отдела закупок.'
+                . ' Согласующий ID=' . $approverId
+                . ', перевёл ID=' . $stageChangerId
+            );
+        }
+
         /*
          * Сначала помечаем как PROCESSING.
          * Так агент не сможет повторно накрутить остатки, если стадия не сменится.
          */
         $this->markProcessed($entityTypeId, $requestId, 'PROCESSING');
 
-        $itemData = $this->getSmartProcessItem($entityTypeId, $requestId);
         $products = $this->getProductsForRequest($entityTypeId, $requestId, $itemData);
 
         if (empty($products)) {
@@ -379,6 +394,241 @@ class PurchaseRequestService
         }
     }
 
+
+    /**
+     * Проверяет, что заявку одобрил пользователь из поля "Согласующий"
+     * или начальник отдела закупок.
+     *
+     * Важно:
+     * стандартное поле "Ответственный" здесь не используется.
+     *
+     * @param array $itemData
+     * @return bool
+     */
+    private function isApprovedByApprover(array $itemData): bool
+    {
+        $approverId = $this->extractUserId($itemData['UF_SC_APPROVER_ID'] ?? 0);
+        $stageChangerId = $this->getStageChangerId($itemData);
+
+        if ($stageChangerId <= 0) {
+            return false;
+        }
+
+        /*
+         * Исключение:
+         * начальник отдела закупок может одобрить любую заявку,
+         * даже если он не указан в поле "Согласующий".
+         */
+        if ($this->isPurchaseChief($stageChangerId)) {
+            return true;
+        }
+
+        if ($approverId <= 0) {
+            return false;
+        }
+
+        return $approverId === $stageChangerId;
+    }
+
+    /**
+     * Нормализует значение пользовательского поля с пользователем.
+     *
+     * Bitrix может вернуть USER-поле как число, строку или массив.
+     *
+     * @param mixed $value
+     * @return int
+     */
+    private function extractUserId($value): int
+    {
+        if (is_array($value)) {
+            $value = reset($value);
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * Проверяет, может ли пользователь одобрять любые заявки на закупку.
+     *
+     * Право имеют:
+     * 1. Администраторы;
+     * 2. Директор сервисного центра;
+     * 3. Начальники закупок сервисного центра.
+     *
+     * Обычный закупщик может одобрить только заявку,
+     * где он указан в поле "Согласующий".
+     *
+     * @param int $userId
+     * @return bool
+     */
+    private function isPurchaseChief(int $userId): bool
+    {
+        global $DB;
+
+        if ($userId <= 0) {
+            return false;
+        }
+
+        if (!class_exists('\CUser')) {
+            return false;
+        }
+
+        $groupIds = \CUser::GetUserGroup($userId);
+
+        if (!is_array($groupIds) || empty($groupIds)) {
+            return false;
+        }
+
+        $groupIds = array_values(array_unique(array_filter(array_map('intval', $groupIds))));
+
+        if (empty($groupIds)) {
+            return false;
+        }
+
+        /*
+         * Группа 1 — стандартная группа администраторов Битрикса.
+         */
+        if (in_array(1, $groupIds, true)) {
+            return true;
+        }
+
+        $groupIdsSql = implode(',', $groupIds);
+
+        $result = $DB->Query("
+            SELECT ID, NAME, STRING_ID
+            FROM b_group
+            WHERE ID IN ({$groupIdsSql})
+        ");
+
+        while ($group = $result->Fetch()) {
+            $groupName = trim((string)($group['NAME'] ?? ''));
+            $groupCode = trim((string)($group['STRING_ID'] ?? ''));
+
+            /*
+             * Проверка по символьному идентификатору группы.
+             * Это самый надёжный вариант, если символьные коды заполнены.
+             */
+            if (in_array(
+                $groupCode,
+                [
+                    'SERVICECENTER_DIRECTOR',
+                    'SERVICECENTER_PURCHASE_HEAD',
+                ],
+                true
+            )) {
+                return true;
+            }
+
+            /*
+             * Проверка по точному названию группы.
+             */
+            if (in_array(
+                $groupName,
+                [
+                    'Администраторы',
+                    'Директор сервисного центра',
+                    'Начальники закупок сервисного центра',
+                    'Начальник отдела закупок',
+                    'Начальники закупок',
+                    'Начальник закупок',
+                    'Руководитель закупок',
+                ],
+                true
+            )) {
+                return true;
+            }
+
+            /*
+             * Дополнительная гибкая проверка,
+             * если название группы немного отличается.
+             */
+            $groupNameLower = mb_strtolower($groupName);
+
+            if (
+                mb_stripos($groupNameLower, 'директор') !== false
+                && mb_stripos($groupNameLower, 'сервис') !== false
+            ) {
+                return true;
+            }
+
+            if (
+                mb_stripos($groupNameLower, 'начальник') !== false
+                && mb_stripos($groupNameLower, 'закуп') !== false
+            ) {
+                return true;
+            }
+
+            if (
+                mb_stripos($groupNameLower, 'руководитель') !== false
+                && mb_stripos($groupNameLower, 'закуп') !== false
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Возвращает пользователя, который последним двигал/изменял заявку.
+     *
+     * Для смарт-процессов Битрикс обычно использует поля MOVED_BY или UPDATED_BY.
+     * На разных версиях портала названия могут отличаться, поэтому проверяем несколько вариантов.
+     *
+     * @param array $itemData
+     * @return int
+     */
+    private function getStageChangerId(array $itemData): int
+    {
+        $candidateFields = [
+            'MOVED_BY',
+            'MOVED_BY_ID',
+            'UPDATED_BY',
+            'UPDATED_BY_ID',
+            'MODIFY_BY_ID',
+            'MODIFIED_BY',
+            'LAST_MODIFIED_BY',
+        ];
+
+        foreach ($candidateFields as $fieldName) {
+            $userId = (int)($itemData[$fieldName] ?? 0);
+
+            if ($userId > 0) {
+                return $userId;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Возвращает заявку обратно на стадию "На согласовании".
+     *
+     * @param int $entityTypeId
+     * @param int $requestId
+     * @return void
+     */
+    private function returnToAgreementStage(int $entityTypeId, int $requestId): void
+    {
+        $agreementStageId = $this->findStageIdByName($entityTypeId, 'На согласовании');
+
+        if ($agreementStageId === '') {
+            /*
+             * Фактическая стадия "На согласовании" у твоего процесса.
+             */
+            if ($entityTypeId === 1046) {
+                $agreementStageId = 'DT1046_6:PREPARATION';
+            }
+        }
+
+        if ($agreementStageId === '') {
+            throw new \RuntimeException('Не найдена стадия "На согласовании"');
+        }
+
+        $this->updateSmartProcessItem($entityTypeId, $requestId, [
+            'STAGE_ID' => $agreementStageId,
+        ]);
+    }
 
     /**
      * Возвращает название товара/запчасти по ID.
